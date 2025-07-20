@@ -2,7 +2,7 @@ name: Sync from GitLab main branch
 
 on:
   schedule:
-    - cron: '0 0 * * *' # runs everyday
+    - cron: '0 0 * * *'  # Daily
   workflow_dispatch:
 
 jobs:
@@ -10,26 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout GitHub repo
+      - name: Checkout GitHub repo (main branch)
         uses: actions/checkout@v3
         with:
           ref: main
 
-      - name: Setup Git config
+      - name: Setup Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add GitLab remote
+      - name: Add GitLab remote and fetch
         run: |
           git remote add gitlab https://gitlab.com/kalilinux/build-scripts/kali-live.git
           git fetch gitlab main
 
-      - name: Merge GitLab main into GitHub main
+      - name: Merge GitLab's main into GitHub main
         run: |
           git merge --no-edit gitlab/main
 
-      - name: Push merged changes to GitHub
+      - name: Push to GitHub
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
