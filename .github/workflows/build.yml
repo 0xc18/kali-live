@@ -27,11 +27,12 @@ jobs:
       - name: Install build dependencies
         run: |
           apt update
-          apt install -y git simple-cdd cdebootstrap p7zip wget  live-build internetarchive
+          apt install -y git simple-cdd cdebootstrap p7zip wget  live-build
+          pipx install GofileIOUploader
 
       - name: Build ISO image
         run: |
-          ./build.sh --verbose --variant xfce-light
+          ./build.sh --verbose --variant minimal
         continue-on-error: true
 
       - name: Upload build log even on failure
@@ -41,38 +42,19 @@ jobs:
           name: build-log
           path: ./build.log
 
-      - name: Compute MD5 & rename artifact
+      - name: Upload image and log to gofile.io
+        id: gofile
         if: success()
-        id: md5
         run: |
-          FILE=$(ls images/*.iso | head -n1)
-          HASH=$(md5sum "$FILE" | cut -d' ' -f1)
-          NEW_FILE="${FILE%.*}_${HASH}.${FILE##*.}"
-          mv "$FILE" "$NEW_FILE"
-          echo "file=$NEW_FILE" >> "$GITHUB_OUTPUT"
-          echo "tag=$HASH" >> "$GITHUB_OUTPUT"
-          echo "url=https://archive.org/download/unofficial-kali-live-images/$NEW_FILE" >> "$GITHUB_OUTPUT"
-
-      - name: Upload file to archive.org
-        if: success()
-        env:
-          user: ${{ secrets.USERNAME }}
-          pass: ${{ secrets.PASSWORD }}
-          identifier: unofficial-kali-live-images
-        run: |
-          ia co -u $user -p $pass
-          ia upload unofficial-kali-live-images images/*.iso
+          gofile-upload --save image.csv --public images/
+          echo "name=$(cut -d',' -f10 image.csv)" >> "$GITHUB_OUTPUT"
+          echo "url=$(cut -d',' -f16 image.csv)" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release with IA URL
         if: success()
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: "${{ steps.md5.outputs.tag }}"
-          body: |
-            🚀 ISO file is too large to attach directly.
-
-            🔗 [Click here to download the image from Internet Archive](${{ steps.md5.outputs.url }})
-
-            **MD5 hash:** `${{ steps.md5.outputs.tag }}`
+          tag_name: build${{ github.run_number }}
+          body: [${{ steps.gofile.outputs.name }}](${{ steps.gofile.outputs.url }})
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
