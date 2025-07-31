@@ -28,7 +28,6 @@ jobs:
         run: |
           apt update
           apt install -y git simple-cdd cdebootstrap p7zip wget  live-build pipx
-          pipx ensurepath
           pipx install GofileIOUploader
 
       - name: Build ISO image
@@ -47,7 +46,7 @@ jobs:
         id: gofile
         if: success()
         run: |
-          gofile-upload --save image.csv --public images/
+          /github/home/.local/bin/gofile-upload --save image.csv --public images/
           echo "name=$(cut -d',' -f10 image.csv)" >> "$GITHUB_OUTPUT"
           echo "url=$(cut -d',' -f16 image.csv)" >> "$GITHUB_OUTPUT"
 
