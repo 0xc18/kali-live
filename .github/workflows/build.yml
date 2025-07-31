@@ -28,6 +28,7 @@ jobs:
         run: |
           apt update
           apt install -y git simple-cdd cdebootstrap p7zip wget  live-build pipx
+          pipx ensurepath
           pipx install GofileIOUploader
 
       - name: Build ISO image
