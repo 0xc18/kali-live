@@ -1,0 +1,78 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    container:
+      image: kalilinux/kali-rolling
+      options: --privileged  # live-build needs privileges
+
+    steps:
+      - name: Install GitHub Actions dependencies (core packages)
+        run: |
+          apt update
+          apt install -y sudo curl gnupg ca-certificates
+
+      - name: Add sudo user workaround for container
+        run: |
+          echo 'github ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Install build dependencies
+        run: |
+          apt update
+          apt install -y git simple-cdd cdebootstrap p7zip wget  live-build internetarchive
+
+      - name: Build ISO image
+        run: |
+          ./build.sh --verbose --variant xfce-light
+        continue-on-error: true
+
+      - name: Upload build log even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ./build.log
+
+      - name: Compute MD5 & rename artifact
+        if: success()
+        id: md5
+        run: |
+          FILE=$(ls images/*.iso | head -n1)
+          HASH=$(md5sum "$FILE" | cut -d' ' -f1)
+          NEW_FILE="${FILE%.*}_${HASH}.${FILE##*.}"
+          mv "$FILE" "$NEW_FILE"
+          echo "file=$NEW_FILE" >> "$GITHUB_OUTPUT"
+          echo "tag=$HASH" >> "$GITHUB_OUTPUT"
+          echo "url=https://archive.org/download/unofficial-kali-live-images/$NEW_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload file to archive.org
+        if: success()
+        env:
+          user: ${{ secrets.USERNAME }}
+          pass: ${{ secrets.PASSWORD }}
+          identifier: unofficial-kali-live-images
+        run: |
+          ia co -u $user -p $pass
+          ia upload unofficial-kali-live-images images/*.iso
+
+      - name: Create GitHub Release with IA URL
+        if: success()
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "${{ steps.md5.outputs.tag }}"
+          body: |
+            🚀 ISO file is too large to attach directly.
+
+            🔗 [Click here to download the image from Internet Archive](${{ steps.md5.outputs.url }})
+
+            **MD5 hash:** `${{ steps.md5.outputs.tag }}`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
