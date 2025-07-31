@@ -54,7 +54,7 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.run_number }}
+          tag_name: v${{ github.run_number }}
           body: [${{ steps.gofile.outputs.name }}](${{ steps.gofile.outputs.url }})
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
