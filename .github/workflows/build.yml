@@ -46,9 +46,11 @@ jobs:
         id: gofile
         if: success()
         run: |
-          /github/home/.local/bin/gofile-upload --save image.csv --public images/
-          echo "name=$(cut -d',' -f10 image.csv)" >> "$GITHUB_OUTPUT"
-          echo "url=$(cut -d',' -f16 image.csv)" >> "$GITHUB_OUTPUT"
+          /github/home/.local/bin/gofile-upload --save --public images/
+          FILE=$(ls images/*.iso)
+          URL=$(awk -F',' 'NR==1 {for(i=1; i<=NF; i++) {if($i=="downloadPage") {col=i; break}}} NR==2 {print $col}' *.csv)
+          echo "name=$FILE" >> "$GITHUB_OUTPUT"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release with IA URL
         if: success()
