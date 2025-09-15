@@ -27,7 +27,7 @@ jobs:
 
       - name: Merge GitLab's main into GitHub main
         run: |
-          git merge --no-edit --allow-unrelated-histories gitlab/main
+          git merge -X theirs --no-edit --allow-unrelated-histories gitlab/main
 
       - name: Push to GitHub
         env:
